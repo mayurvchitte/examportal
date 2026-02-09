@@ -113,7 +113,8 @@ export class ExamPageComponent implements OnInit, OnDestroy {
   // --- proctoring ---
   @ViewChild('videoElement') videoElement?: ElementRef;
   warningCount = 0;
-  maxWarnings = 5;
+  maxWarnings = 10;
+  isFaceNotDetected = false;
   private proctoringInterval: any;
   private stream: MediaStream | null = null;
   // private audioContext: AudioContext | null = null;
@@ -131,7 +132,7 @@ export class ExamPageComponent implements OnInit, OnDestroy {
     private cdRef: ChangeDetectorRef,
     @Inject(PLATFORM_ID) private platformId: Object,
     private layout: LayoutService
-  ) {}
+  ) { }
 
   get currentQuestion(): any {
     const question = this.allQuestions[this.currentQuestionIndex];
@@ -169,7 +170,7 @@ export class ExamPageComponent implements OnInit, OnDestroy {
   @HostListener('document:visibilitychange')
   onVisibilityChange(): void {
     if (document.hidden && isPlatformBrowser(this.platformId)) {
-      this.snackBar.open('Tab switching detected. Exam terminated.', 'Close', { duration: 5000, panelClass: 'error-snackbar' });
+      this.snackBar.open(`Warning ${this.warningCount}/${this.maxWarnings}: Tab switching detected!`, 'Close', { duration: 5000, panelClass: 'warn-snackbar' });
       this.submitExam(true);
     }
   }
@@ -230,15 +231,18 @@ export class ExamPageComponent implements OnInit, OnDestroy {
         const detections = await faceapi.detectAllFaces(this.videoElement.nativeElement, new faceapi.TinyFaceDetectorOptions());
         if (detections.length === 0) {
           this.warningCount++;
+          this.isFaceNotDetected = true;
           this.snackBar.open(`Warning ${this.warningCount}/${this.maxWarnings}: Face not detected!`, 'Close', { duration: 2000, panelClass: 'warn-snackbar' });
 
           // Check if we've reached the maximum warnings
           if (this.warningCount >= this.maxWarnings) {
-            this.snackBar.open('Proctoring Violation: Maximum face detection warnings exceeded. Exam has been automatically submitted.', 'Close', { duration: 5000, panelClass: 'error-snackbar' });
+            this.snackBar.open('Proctoring Violation: Maximum warnings exceeded. Assignment has been automatically submitted.', 'Close', { duration: 5000, panelClass: 'error-snackbar' });
             this.submitExam(true);
           }
+        } else {
+          // Do NOT reset warningCount, but hide the overlay flag since face is detected
+          this.isFaceNotDetected = false;
         }
-        // Removed reset of warning count to make it cumulative
       } catch (e) {
         console.error('Face detection error:', e);
       }
@@ -330,7 +334,7 @@ export class ExamPageComponent implements OnInit, OnDestroy {
       lockedCodingAnswers: this.lockedCodingAnswers,
       executionResults: this.executionResults,
       warningCount: this.warningCount,
-      // voiceWarningCount: this.voiceWarningCount,
+      isFaceNotDetected: this.isFaceNotDetected,
       sectionWarningShown: this.sectionWarningShown,
       endedSectionIds: Array.from(this.endedSectionIds),
       selectedLanguage: this.selectedLanguage,
@@ -380,7 +384,7 @@ export class ExamPageComponent implements OnInit, OnDestroy {
       this.lockedCodingAnswers = state.lockedCodingAnswers || {};
       this.executionResults = state.executionResults || {};
       this.warningCount = state.warningCount || 0;
-      // this.voiceWarningCount = state.voiceWarningCount || 0;
+      this.isFaceNotDetected = state.isFaceNotDetected || false;
       this.sectionWarningShown = state.sectionWarningShown || false;
       this.endedSectionIds = new Set(state.endedSectionIds || []);
       this.selectedLanguage = state.selectedLanguage || 'java';
@@ -415,7 +419,7 @@ export class ExamPageComponent implements OnInit, OnDestroy {
         // Validate response structure
         if (!res) {
           console.error('Empty response received from API');
-          this.showError('No exam data received. Please try again.');
+          this.showError('No assignment data received. Please try again.');
           return;
         }
 
@@ -439,7 +443,7 @@ export class ExamPageComponent implements OnInit, OnDestroy {
             // const isCoding = q.isCodingQuestion || (q.section && (q.section.name.toLowerCase() === 'coding' || q.section.name.toLowerCase() === 'sql'));
             // if (isCoding) {
             if (q.boilerplateJava !== undefined || q.boilerplatePython !== undefined ||
-                q.boilerplateC !== undefined || q.boilerplateSql !== undefined) {
+              q.boilerplateC !== undefined || q.boilerplateSql !== undefined) {
               return {
                 ...q,
                 boilerplateCode: {
@@ -494,7 +498,7 @@ export class ExamPageComponent implements OnInit, OnDestroy {
         // Validate exam data
         if (!this.exam) {
           console.error('No exam data found');
-          this.showError('No active exam found. Please contact administrator.');
+          this.showError('No active assignment found. Please contact administrator.');
           return;
         }
 
@@ -543,7 +547,7 @@ export class ExamPageComponent implements OnInit, OnDestroy {
           this.selectQuestion(this.currentQuestionIndex || 0);
         } else {
           console.error('No sections or questions found');
-          this.showError('No questions available for this exam. Please contact administrator.');
+          this.showError('No questions available for this assignment. Please contact administrator.');
           return;
         }
 
@@ -558,7 +562,7 @@ export class ExamPageComponent implements OnInit, OnDestroy {
       error: (err) => {
         console.error('Error loading exam:', err);
         this.isLoading = false;
-        this.showError(err?.error?.message || 'Could not load active exam. Please try again.');
+        this.showError(err?.error?.message || 'Could not load active assignment. Please try again.');
       }
     });
   }
@@ -957,7 +961,7 @@ export class ExamPageComponent implements OnInit, OnDestroy {
   }
 
   // This method is for submitting to judge (e.g., running against hidden test cases)
-submitCode(questionId: number, lang: 'java' | 'python' | 'c'): void {
+  submitCode(questionId: number, lang: 'java' | 'python' | 'c'): void {
     const code = this.codingAnswers[questionId]?.[lang];
     if (!code) {
       this.snackBar.open('Please enter some code to submit.', 'Close', { duration: 2000 });
@@ -1083,7 +1087,7 @@ submitCode(questionId: number, lang: 'java' | 'python' | 'c'): void {
     clearInterval(this.proctoringInterval);
     // clearInterval(this.voiceDetectionInterval);
     if (isTerminated) {
-      this.snackBar.open('Exam terminated due to violation.', 'Close', { duration: 5000, panelClass: 'error-snackbar' });
+      this.snackBar.open('Assignment terminated due to violation.', 'Close', { duration: 5000, panelClass: 'error-snackbar' });
     }
 
     const payload = {
@@ -1116,7 +1120,7 @@ submitCode(questionId: number, lang: 'java' | 'python' | 'c'): void {
           this.clearExamState(); // Clear state even on error
           this.router.navigate(['/result']);
         } else {
-          const displayMessage = errorMessage === 'Exam already submitted' ? 'Your exam has already been submitted.' : 'Error submitting exam. Please try again.';
+          const displayMessage = errorMessage === 'Exam already submitted' ? 'Your assignment has already been submitted.' : 'Error submitting assignment. Please try again.';
           this.snackBar.open(displayMessage, 'Close', { duration: 5000, panelClass: 'error-snackbar' });
         }
       }
@@ -1261,4 +1265,3 @@ submitCode(questionId: number, lang: 'java' | 'python' | 'c'): void {
     return JSON.stringify(tc.output || tc.expected);
   }
 }
-

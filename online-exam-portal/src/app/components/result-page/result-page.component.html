@@ -1,17 +1,18 @@
 <div class="container">
   <mat-card *ngIf="result">
     <mat-card-header>
-      <mat-card-title>Exam Completed!</mat-card-title>
+      <mat-card-title>Assignment Completed!</mat-card-title>
       <!-- <mat-card-subtitle *ngIf="!isAdmin">Thank you for taking the assessment.</mat-card-subtitle> -->
-      <mat-card-subtitle *ngIf="isAdmin">Admin View - Exam Results</mat-card-subtitle>
+      <mat-card-subtitle *ngIf="isAdmin">Admin View - Assignment Results</mat-card-subtitle>
     </mat-card-header>
     <mat-card-content>
       <div *ngIf="!isAdmin">
-        <p>      <br>
-Thank you for submitting the exam. If you are qualified, our team will contact you.</p>
+        <p> <br>
+          Thank you for submitting the assignment. If you are qualified, our team will contact you.</p>
         <p>Your results have been submitted successfully.</p>
         <a href="https://apicalsoftsolutions.com/" target="_blank" rel="noopener"> apicalsoftsolutions.com<br></a>
-        <a href="https://www.linkedin.com/company/apical-soft-solutions/" target="_blank" rel="noopener"><br>Follow us on LinkedIn</a>
+        <a href="https://www.linkedin.com/company/apical-soft-solutions/" target="_blank" rel="noopener"><br>Follow us
+          on LinkedIn</a>
 
       </div>
       <div *ngIf="isAdmin">

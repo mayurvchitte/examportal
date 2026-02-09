@@ -2,10 +2,10 @@
 <video #videoElement autoplay muted playsinline class="hidden-video" style="display:none;"></video>
 
 <!-- Proctoring warnings -->
-<div *ngIf="warningCount > 0" class="warning-overlay">
+<div *ngIf="isFaceNotDetected" class="warning-overlay">
   <div class="warning-box">
     <mat-icon>warning</mat-icon>
-    <span>Proctoring Alert: Face Not Detected ({{ warningCount }}/{{ maxWarnings }})</span>
+    <span>Proctoring Alert: Face Not Detected (Warning Count: {{ warningCount }}/{{ maxWarnings }})</span>
   </div>
 </div>
 
@@ -20,7 +20,7 @@
 <!-- Loading overlay -->
 <div *ngIf="isLoading" class="loading-shade">
   <mat-spinner></mat-spinner>
-  <p>Loading exam and activating proctoring...</p>
+  <p>Loading assignment and activating proctoring...</p>
 </div>
 
 <!-- Error state -->
@@ -28,10 +28,10 @@
   <mat-card class="error-card">
     <mat-card-content>
       <mat-icon class="error-icon">error_outline</mat-icon>
-      <h2>Unable to Load Exam</h2>
-      <p>There was an error loading the exam data. This might be due to:</p>
+      <h2>Unable to Load Assignment</h2>
+      <p>There was an error loading the assignment data. This might be due to:</p>
       <ul>
-        <li>No active exam is currently available</li>
+        <li>No active assignment is currently available</li>
         <li>Network connectivity issues</li>
         <li>Server maintenance</li>
       </ul>
@@ -51,7 +51,7 @@
   <aside class="side-panel">
     <div class="panel-header">
       <h2 class="panel-title">{{ exam.examName }}</h2>
-      <p class="panel-subtitle">Exam Questions</p>
+      <p class="panel-subtitle">Assignment Questions</p>
     </div>
 
     <!-- Section-based question navigation -->
@@ -62,9 +62,7 @@
           <h3 class="section-title">{{ section.name }} ({{ section.questions.length }})</h3>
           <mat-grid-list cols="5" rowHeight="1:1" gutterSize="8px">
             <mat-grid-tile *ngFor="let q of section.questions; let i = index">
-              <button
-                class="question-nav-btn"
-                [class.current]="getQuestionGlobalIndex(q) === currentQuestionIndex"
+              <button class="question-nav-btn" [class.current]="getQuestionGlobalIndex(q) === currentQuestionIndex"
                 [class.answered]="isQuestionAnswered(q)"
                 [attr.aria-label]="'Go to question ' + (i + 1) + ' in section ' + section.name"
                 (click)="selectQuestionBySection(section.id, i)">
@@ -81,8 +79,8 @@
           <mat-card-content>
             <mat-icon class="info-icon">info_outline</mat-icon>
             <h3>No Questions Available</h3>
-            <p>This exam doesn't have any questions configured yet.</p>
-            <p>Please contact your administrator to add questions to this exam.</p>
+            <p>This assignment doesn't have any questions configured yet.</p>
+            <p>Please contact your administrator to add questions to this assignment.</p>
           </mat-card-content>
         </mat-card>
       </div>
@@ -111,7 +109,8 @@
             <mat-icon>flag</mat-icon>
             {{ isEndingSection ? 'Ending...' : 'End Section' }}
           </button>
-          <button *ngIf="currentSectionIndex < sections.length - 1" mat-stroked-button (click)="nextSection()" [disabled]="!canGoToNextSection()">
+          <button *ngIf="currentSectionIndex < sections.length - 1" mat-stroked-button (click)="nextSection()"
+            [disabled]="!canGoToNextSection()">
             Next Section
             <mat-icon>chevron_right</mat-icon>
           </button>
@@ -137,23 +136,18 @@
         <ng-container *ngIf="getQuestionType(currentQuestion) === 'MCQ'">
           <mat-card-content>
             <h3 class="question-text">{{ currentQuestion.questionText }}</h3>
-            <mat-radio-group
-              [(ngModel)]="mcqAnswers[currentQuestion.id]"
-              class="options-group"
-              [disabled]="isMcqAnswerLocked(currentQuestion.id)"
->
+            <mat-radio-group [(ngModel)]="mcqAnswers[currentQuestion.id]" class="options-group"
+              [disabled]="isMcqAnswerLocked(currentQuestion.id)">
               <mat-radio-button
                 *ngFor="let opt of [currentQuestion.option1, currentQuestion.option2, currentQuestion.option3, currentQuestion.option4]"
-                [value]="opt"
-                class="option"
-                [class.locked]="isMcqAnswerLocked(currentQuestion.id)"
-                [disabled]="isMcqAnswerLocked(currentQuestion.id)"
-                (change)="handleMcqAnswer(currentQuestion.id, opt)">
+                [value]="opt" class="option" [class.locked]="isMcqAnswerLocked(currentQuestion.id)"
+                [disabled]="isMcqAnswerLocked(currentQuestion.id)" (change)="handleMcqAnswer(currentQuestion.id, opt)">
                 {{ opt }}
               </mat-radio-button>
             </mat-radio-group>
             <div class="question-actions">
-              <button mat-raised-button color="primary" class="next-question-btn" (click)="nextQuestion()" [disabled]="!canGoToNextQuestion()">
+              <button mat-raised-button color="primary" class="next-question-btn" (click)="nextQuestion()"
+                [disabled]="!canGoToNextQuestion()">
                 Next Question
                 <mat-icon>navigate_next</mat-icon>
               </button>
@@ -169,7 +163,8 @@
             <!-- HackerRank-like language dropdown -->
             <div class="lang-selector" style="display:flex; gap:12px; align-items:center; margin-bottom:8px;">
               <label for="langDd" style="font-weight:600;">Language:</label>
-              <select id="langDd" [(ngModel)]="selectedLanguage" (ngModelChange)="onTabChangeTabLabel({tab:{textLabel:$event}})" style="padding:6px 10px;">
+              <select id="langDd" [(ngModel)]="selectedLanguage"
+                (ngModelChange)="onTabChangeTabLabel({tab:{textLabel:$event}})" style="padding:6px 10px;">
                 <option value="java">Java (21)</option>
                 <option value="python">Python (3.11)</option>
                 <option value="c">C (GCC 12)</option>
@@ -181,15 +176,15 @@
               <app-codemirror-editor
                 style="height: 300px; border: 1px solid #ccc; border-radius: 4px; overflow: hidden;"
                 [initialCode]="codingAnswers[currentQuestion.id][selectedLanguage] || (currentQuestion.boilerplateCode ? currentQuestion.boilerplateCode[selectedLanguage] : '')"
-                [language]="selectedLanguage"
-                (codeChange)="onCodeChange(selectedLanguage, $event)">
+                [language]="selectedLanguage" (codeChange)="onCodeChange(selectedLanguage, $event)">
               </app-codemirror-editor>
             </div>
 
             <!-- Visible sample test cases like HackerRank -->
             <div *ngIf="currentQuestion?.parsedTestCases?.length" class="testcases" style="margin-top:12px;">
               <h4 style="margin:4px 0;">Sample Test Cases</h4>
-              <div *ngFor="let tc of currentQuestion.parsedTestCases; let i = index" class="tc" style="border:1px solid #e0e0e0; border-radius:6px; margin-top:8px;">
+              <div *ngFor="let tc of currentQuestion.parsedTestCases; let i = index" class="tc"
+                style="border:1px solid #e0e0e0; border-radius:6px; margin-top:8px;">
                 <div style="background:#f7f7f7; padding:6px 10px; font-weight:600;">Test Case {{i+1}}</div>
                 <div style="display:flex; gap:12px; padding:10px;">
                   <div style="flex:1;">
@@ -206,19 +201,18 @@
             <div class="run-panel">
               <mat-form-field appearance="outline" class="stdin-field">
                 <mat-label>Program Input (stdin)</mat-label>
-                <textarea matInput rows="4" [(ngModel)]="programInput" placeholder="Optional input for your program"></textarea>
+                <textarea matInput rows="4" [(ngModel)]="programInput"
+                  placeholder="Optional input for your program"></textarea>
               </mat-form-field>
 
               <div class="run-actions">
-                <button mat-raised-button color="primary"
-                        (click)="runCode(currentQuestion.id, selectedLanguage)"
-                        [disabled]="isRunning">
+                <button mat-raised-button color="primary" (click)="runCode(currentQuestion.id, selectedLanguage)"
+                  [disabled]="isRunning">
                   <mat-icon>play_arrow</mat-icon>
                   {{ isRunning ? 'Running...' : 'Run (' + selectedLanguage + ')' }}
                 </button>
-                <button mat-raised-button color="accent"
-                        (click)="submitCode(currentQuestion.id, selectedLanguage)"
-                        [disabled]="isRunning">
+                <button mat-raised-button color="accent" (click)="submitCode(currentQuestion.id, selectedLanguage)"
+                  [disabled]="isRunning">
                   <mat-icon>send</mat-icon>
                   {{ isRunning ? 'Submitting...' : 'Submit (' + selectedLanguage + ')' }}
                 </button>
@@ -233,10 +227,12 @@
               <!-- Per test-case feedback after Submit -->
               <div *ngIf="submissionResult?.results?.length" class="judge-results" style="margin-top:10px;">
                 <h4>Test Case Results</h4>
-                <div *ngFor="let r of submissionResult.results" style="border:1px solid #e0e0e0; border-radius:6px; margin-top:8px;">
+                <div *ngFor="let r of submissionResult.results"
+                  style="border:1px solid #e0e0e0; border-radius:6px; margin-top:8px;">
                   <div style="display:flex; justify-content:space-between; padding:6px 10px; background:#f7f7f7;">
                     <div>Test Case {{ r.testCase }}</div>
-                    <div [style.color]="r.status === 'Passed' ? 'green' : (r.status === 'Wrong Answer' ? '#d32f2f' : '#f57c00')">
+                    <div
+                      [style.color]="r.status === 'Passed' ? 'green' : (r.status === 'Wrong Answer' ? '#d32f2f' : '#f57c00')">
                       {{ r.status }}
                     </div>
                   </div>
@@ -257,7 +253,8 @@
               </div>
             </div>
             <div class="question-actions">
-              <button mat-raised-button color="primary" class="next-question-btn" (click)="nextQuestion()" [disabled]="!canGoToNextQuestion()">
+              <button mat-raised-button color="primary" class="next-question-btn" (click)="nextQuestion()"
+                [disabled]="!canGoToNextQuestion()">
                 Next Question
                 <mat-icon>navigate_next</mat-icon>
               </button>
@@ -273,8 +270,7 @@
             <div>
               <app-codemirror-editor
                 style="height: 300px; border: 1px solid #ccc; border-radius: 4px; overflow: hidden;"
-                [initialCode]="codingAnswers[currentQuestion.id]['sql']"
-                language="sql"
+                [initialCode]="codingAnswers[currentQuestion.id]['sql']" language="sql"
                 (codeChange)="onCodeChange('sql', $event)">
               </app-codemirror-editor>
             </div>
@@ -284,7 +280,8 @@
                 <mat-icon>play_arrow</mat-icon>
                 {{ isRunning ? 'Running...' : 'Run SQL' }}
               </button>
-              <button mat-raised-button color="accent" (click)="submitSql(currentQuestion.id)" [disabled]="isRunning" style="margin-left:8px;">
+              <button mat-raised-button color="accent" (click)="submitSql(currentQuestion.id)" [disabled]="isRunning"
+                style="margin-left:8px;">
                 <mat-icon>send</mat-icon>
                 {{ isRunning ? 'Submitting...' : 'Submit SQL' }}
               </button>
@@ -298,10 +295,12 @@
               <!-- Per test-case feedback after Submit (SQL) -->
               <div *ngIf="submissionResult?.results?.length" class="judge-results" style="margin-top:10px;">
                 <h4>Test Case Results</h4>
-                <div *ngFor="let r of submissionResult.results" style="border:1px solid #e0e0e0; border-radius:6px; margin-top:8px;">
+                <div *ngFor="let r of submissionResult.results"
+                  style="border:1px solid #e0e0e0; border-radius:6px; margin-top:8px;">
                   <div style="display:flex; justify-content:space-between; padding:6px 10px; background:#f7f7f7;">
                     <div>Test Case {{ r.testCase }}</div>
-                    <div [style.color]="r.status === 'Passed' ? 'green' : (r.status === 'Wrong Answer' ? '#d32f2f' : '#f57c00')">
+                    <div
+                      [style.color]="r.status === 'Passed' ? 'green' : (r.status === 'Wrong Answer' ? '#d32f2f' : '#f57c00')">
                       {{ r.status }}
                     </div>
                   </div>
@@ -318,7 +317,8 @@
               </div>
             </div>
             <div class="question-actions">
-              <button mat-raised-button color="primary" class="next-question-btn" (click)="nextQuestion()" [disabled]="!canGoToNextQuestion()">
+              <button mat-raised-button color="primary" class="next-question-btn" (click)="nextQuestion()"
+                [disabled]="!canGoToNextQuestion()">
                 Next Question
                 <mat-icon>navigate_next</mat-icon>
               </button>
