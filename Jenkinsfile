@@ -8,7 +8,7 @@ pipeline {
     SERVER_HOST = "72.60.219.208"
     SERVER_USER = "ubuntu"
 
-    REPO_URL  = "https://github.com/maheshpalakonda/examportal.git"
+    REPO_URL  = "https://github.com/mayurvchitte/examportal.git"
     BRANCH    = "master"
     IMAGE_TAG = "latest"
 
